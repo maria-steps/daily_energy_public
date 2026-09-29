@@ -1,0 +1,384 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Daily Energy | Energie-Check</title>
+  <meta name="description" content="Persönlicher Energiebedarfsrechner">
+  <style>
+    :root {
+      --ink: #162426;
+      --muted: #647374;
+      --paper: #f4f7f1;
+      --card: #ffffff;
+      --line: #dce6df;
+      --teal: #0e7770;
+      --teal-dark: #07534f;
+      --coral: #e8795f;
+      --yellow: #f6c85f;
+      --mint: #d9efe7;
+      --shadow: 0 18px 45px rgba(27, 65, 59, .10);
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      color: var(--ink);
+      background: var(--paper);
+      font-family: Georgia, 'Times New Roman', serif;
+      min-height: 100vh;
+    }
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0 0 auto;
+      height: 390px;
+      z-index: -1;
+      background: linear-gradient(120deg, #d9eee4 0%, #eff5eb 56%, #f8dfc9 100%);
+      clip-path: polygon(0 0, 100% 0, 100% 74%, 0 100%);
+    }
+    .shell { width: min(1180px, calc(100% - 40px)); margin: 0 auto; }
+    header { padding: 34px 0 48px; display: flex; align-items: center; justify-content: space-between; gap: 20px; }
+    .brand { display: flex; align-items: center; gap: 12px; font-weight: bold; letter-spacing: .02em; }
+    .brand-mark { display: grid; place-items: center; width: 39px; height: 39px; border-radius: 12px 12px 12px 3px; background: var(--teal); color: white; font-family: Arial, sans-serif; font-size: 19px; transform: rotate(-6deg); }
+    .eyebrow { margin: 0 0 8px; color: var(--teal); font-family: Arial, sans-serif; font-size: 11px; font-weight: 800; letter-spacing: .17em; text-transform: uppercase; }
+    h1 { max-width: 620px; margin: 0; font-size: clamp(36px, 5vw, 66px); line-height: .98; letter-spacing: -.04em; }
+    .intro { max-width: 580px; margin: 18px 0 0; color: var(--muted); font-size: 18px; line-height: 1.5; }
+    .header-note { align-self: flex-end; max-width: 210px; color: var(--teal-dark); font-size: 14px; line-height: 1.35; }
+    .layout { display: grid; grid-template-columns: 365px 1fr; gap: 24px; align-items: start; padding-bottom: 50px; }
+    .panel, .result-card { background: var(--card); border: 1px solid rgba(220, 230, 223, .9); border-radius: 18px; box-shadow: var(--shadow); }
+    .panel { padding: 25px; }
+    .panel h2, .section-title { margin: 0; font-size: 24px; letter-spacing: -.02em; }
+    .panel-copy { margin: 7px 0 21px; color: var(--muted); font-family: Arial, sans-serif; font-size: 13px; line-height: 1.45; }
+    .field { margin-top: 15px; }
+    .field label { display: flex; justify-content: space-between; gap: 10px; margin-bottom: 7px; font-family: Arial, sans-serif; font-size: 12px; font-weight: 700; }
+    .field label span { color: var(--muted); font-weight: 400; }
+    input, select { width: 100%; padding: 12px 13px; border: 1px solid var(--line); border-radius: 9px; background: #fbfdfb; color: var(--ink); font: 15px Arial, sans-serif; outline: none; }
+    input:focus, select:focus { border-color: var(--teal); box-shadow: 0 0 0 3px rgba(14, 119, 112, .12); }
+    .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .segment { display: grid; grid-template-columns: repeat(2, 1fr); gap: 5px; padding: 4px; border: 1px solid var(--line); border-radius: 10px; }
+    .segment label { margin: 0; cursor: pointer; }
+    .segment input { position: absolute; opacity: 0; pointer-events: none; }
+    .segment span { display: block; padding: 9px 4px; border-radius: 6px; color: var(--muted); font: 12px Arial, sans-serif; text-align: center; }
+    .segment input:checked + span { background: var(--mint); color: var(--teal-dark); font-weight: 700; }
+    .action { width: 100%; margin-top: 22px; padding: 14px 18px; border: 0; border-radius: 9px; cursor: pointer; background: var(--teal); color: white; font: 700 14px Arial, sans-serif; transition: transform .2s, background .2s; }
+    .action:hover { background: var(--teal-dark); transform: translateY(-1px); }
+    .action.secondary { margin-top: 9px; background: var(--mint); color: var(--teal-dark); }
+    .action.secondary:hover { background: #c6e5da; }
+    .form-hint { margin: 8px 0 0; color: var(--muted); font: 11px Arial, sans-serif; line-height: 1.4; }
+    .results { display: grid; gap: 24px; }
+    .result-card { padding: 25px; }
+    .result-card.featured { position: relative; overflow: hidden; background: var(--teal-dark); color: white; }
+    .result-card.featured::after { content: '✦'; position: absolute; top: -23px; right: 20px; color: rgba(246, 200, 95, .8); font-size: 130px; line-height: 1; }
+    .result-card.featured .eyebrow, .result-card.featured .subtle { color: #a8d6c8; }
+    .feature-line { display: flex; align-items: end; justify-content: space-between; gap: 16px; }
+    .feature-value { margin: 8px 0 2px; font-size: 45px; line-height: 1; letter-spacing: -.04em; }
+    .subtle { margin: 0; color: var(--muted); font: 12px Arial, sans-serif; }
+    .metric-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+    .metric { padding: 18px; border: 1px solid var(--line); border-radius: 13px; background: #fbfdfb; }
+    .metric.water-metric { border-color: #b8d9e8; background: #eef8fc; }
+    .water-metric .metric-label { color: #28718e; }
+    .water-metric .metric-value { color: #176985; }
+    .water-icon { margin-right: 4px; font-size: 14px; }
+    .metric-label { display: block; min-height: 30px; color: var(--muted); font: 11px Arial, sans-serif; line-height: 1.3; }
+    .metric-value { display: block; margin-top: 8px; font-size: 25px; letter-spacing: -.03em; }
+    .metric-unit { color: var(--muted); font: 11px Arial, sans-serif; }
+    .split { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+    .bmi-number { margin: 9px 0 2px; font-size: 42px; line-height: 1; }
+    .bmi-state { color: var(--teal); font: 700 13px Arial, sans-serif; }
+    .bmi-scale { position: relative; margin: 28px 0 9px; }
+    .scale-bar { display: grid; grid-template-columns: var(--bmi-scale-columns, 28.33% 21.33% 17% 33.33%); height: 12px; overflow: hidden; border-radius: 10px; }
+    .scale-bar span:nth-child(1) { background: #72b6c1; } .scale-bar span:nth-child(2) { background: #82c99b; } .scale-bar span:nth-child(3) { background: var(--yellow); } .scale-bar span:nth-child(4) { background: var(--coral); }
+    .marker { position: absolute; top: -7px; width: 3px; height: 26px; border-radius: 3px; background: var(--ink); transform: translateX(-50%); transition: left .35s ease; }
+    .scale-labels { display: grid; grid-template-columns: var(--bmi-scale-columns, 28.33% 21.33% 17% 33.33%); margin-top: 7px; color: var(--muted); font: 10px Arial, sans-serif; text-align: center; }
+    .bmi-detail { margin: 17px 0 0; padding-top: 14px; border-top: 1px solid var(--line); color: var(--muted); font: 12px Arial, sans-serif; line-height: 1.45; }
+    .bmi-advice { margin: 17px 0 0; padding: 14px; border-radius: 10px; background: #eef8fc; color: #176985; font: 12px Arial, sans-serif; line-height: 1.5; }
+    .bmi-advice.ideal { background: #edf8ef; color: #357548; }
+    .bmi-advice.overweight { background: #fff7e2; color: #765719; }
+    .bmi-advice.obesity { background: #fff0ec; color: #a64d3b; }
+    .bmi-advice:empty { display: none; }
+    .macro-row { display: grid; grid-template-columns: 82px 1fr 56px; align-items: center; gap: 10px; margin-top: 16px; font: 12px Arial, sans-serif; }
+    .macro-track { height: 9px; overflow: hidden; border-radius: 8px; background: #e8efeb; }
+    .macro-fill { height: 100%; border-radius: inherit; transition: width .3s ease; }
+    .macro-fill.carbs { background: var(--coral); } .macro-fill.fat { background: var(--yellow); } .macro-fill.protein { background: var(--teal); }
+    .macro-value { font-weight: 700; text-align: right; }
+    footer { padding: 0 0 34px; color: var(--muted); font: 11px Arial, sans-serif; text-align: center; }
+    @media print {
+      body { background: white; }
+      body::before, header, .panel, footer { display: none; }
+      .shell { width: 100%; }
+      .layout { display: block; padding: 0; }
+      .results { display: block; }
+      .result-card, .metric { box-shadow: none; break-inside: avoid; }
+      .result-card.featured { background: white; color: var(--ink); border: 2px solid var(--teal); }
+      .result-card.featured::after { display: none; }
+      .result-card.featured .eyebrow, .result-card.featured .subtle { color: var(--muted); }
+      .metric-grid, .split { margin-top: 15px; }
+    }
+    @media (max-width: 850px) { header { padding-bottom: 35px; } .header-note { display: none; } .layout { grid-template-columns: 1fr; } .panel { max-width: 560px; width: 100%; } }
+    @media (max-width: 570px) { .shell { width: min(100% - 24px, 520px); } h1 { font-size: 43px; } .metric-grid, .split { grid-template-columns: 1fr; } .metric-grid { grid-template-columns: repeat(3, 1fr); } .result-card, .panel { padding: 19px; } .metric { padding: 14px 10px; } .metric-value { font-size: 20px; } }
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <header>
+      <div>
+        <div class="brand"><span class="brand-mark">＋</span> daily energy</div>
+        <p class="eyebrow" style="margin-top: 52px;">Dein Energie- und Nährstoffbedarf</p>
+      </div>
+      <p class="header-note">Nutze diese Werte als Orientierung für deinen Tag - nicht als starres Ziel.</p>
+    </header>
+
+    <main class="layout">
+      <form class="panel" id="energy-form" oninput="calculate()" onchange="calculate()">
+        <h2>Deine Daten</h2>
+        <p class="panel-copy">Deine persönlichen Angaben helfen, um die Schätzung zu verbessern.</p>
+        <div class="field">
+          <label for="age">Alter <span>Jahre</span></label>
+          <input id="age" type="number" min="14" max="100" value="30" required>
+        </div>
+        <div class="two-col">
+          <div class="field"><label for="height">Körpergröße <span>cm</span></label><input id="height" type="number" min="120" max="230" value="175" required></div>
+          <div class="field"><label for="weight">Gewicht <span>kg</span></label><input id="weight" type="number" min="35" max="250" step="0.1" value="70" required></div>
+        </div>
+        <div class="field">
+          <label>Geschlecht</label>
+          <div class="segment">
+            <label><input type="radio" name="sex" value="female" checked><span>Weiblich</span></label>
+            <label><input type="radio" name="sex" value="male"><span>Männlich</span></label>
+          </div>
+        </div>
+        <div class="field"><label for="activity">Aktivitätslevel</label><select id="activity">
+          <option value="1.2">Ausschließlich sitzende oder liegende Lebensweise (Alte, gebrechliche Menschen) (PAL 1,2)</option>
+          <option value="1.45">Ausschließlich sitzende Tätigkeit mit wenig oder keiner
+anstrengenden Freizeitaktivität (Büroangestellte) (PAL 1,4 - 1,5)</option>
+          <option value="1.65" selected>Sitzende Tätigkeit, zeitweise auch zusätzl.
+Energieaufwand für gehende oder stehende Tätigkeit (Laboranten, Kraftfahrer, Fließbandarbeiter) (PAL 1,6 - 1,7)</option>
+          <option value="1.85">Überwiegend gehende und
+stehende Arbeit (Hausfrauen, Verkäufer, Kellner, Handwerker) (PAL 1,8 - 1,9)</option>
+          <option value="2.2">Körperlich anstrengende
+berufliche Arbeit (PAL 2,0 - 2,4)</option></select></div>
+        <div class="field"><label for="sport">Sport pro Woche</label><select id="sport"><option value="0">Kein regelmäßiger Sport (PAL +0,0)</option>
+          <option value="0.3">Sportliche Betätigungen oder anstrengende Freizeitaktivitäten (30-60 Min. 4-5 x/Woche) (PAL +0,3)</option></select></div>
+        <div class="field"><label for="body-type">Körpertyp</label><select id="body-type"><option value="ectomorph">Leptosomaler Typ – Ektomorph (hager, schlank)</option><option value="endomorph">Pyknischer Typ – Endomorph (kräftig)</option><option value="mesomorph" selected>Athletischer Typ – Mesomorph (Mischtyp)</option></select></div>
+        <div class="field"><label for="report-name">Name <span>optional</span></label><input id="report-name" type="text" placeholder="Dein Name" autocomplete="name"></div>
+        <button class="action secondary" id="report-button" type="button">PDF-Report erstellen&nbsp; ↗</button>
+      </form>
+
+      <section class="results" aria-live="polite">
+        <article class="result-card featured">
+          <p class="eyebrow"><span class="water-icon" aria-hidden="true">🥗</span>Dein Gesamtenergiebedarf</p>
+          <div class="feature-line"><div><p class="feature-value" id="total-calories">2.391 kcal</p><p class="subtle">pro Tag · inklusive Aktivität und Sport</p></div><span style="font-size: 28px; color: var(--yellow);">↗</span></div>
+        </article>
+        <div class="metric-grid">
+          <article class="metric"><span class="metric-label"><span class="water-icon" aria-hidden="true">🛏️</span>Grundumsatz</span><strong class="metric-value" id="bmr">1.490</strong><span class="metric-unit">kcal / Tag</span></article>
+          <article class="metric"><span class="metric-label"><span class="water-icon" aria-hidden="true">🏃</span>Leistungsumsatz</span><strong class="metric-value" id="activity-calories">901</strong><span class="metric-unit">kcal / Tag</span></article>
+          <article class="metric water-metric"><span class="metric-label"><span class="water-icon" aria-hidden="true">🥛</span>Wasserbedarf</span><strong class="metric-value" id="water">1,65–2,00</strong><span class="metric-unit">Liter / Tag</span></article>
+        </div>
+        <div class="split">
+          <article class="result-card">
+            <p class="eyebrow">Körperkompass</p><h2 class="section-title">BMI-Check</h2>
+            <p class="bmi-number" id="bmi">22,9</p><span class="bmi-state" id="bmi-state">Normalgewicht</span>
+            <div class="bmi-scale"><div class="scale-bar"><span></span><span></span><span></span><span></span></div><div class="marker" id="bmi-marker" style="left: 43%;"></div><div class="scale-labels"><span>Unter</span><span>Idealbereich</span><span>Über</span><span>Adipositas</span></div></div>
+            <p class="bmi-advice" id="bmi-advice"></p>
+          </article>
+          <article class="result-card">
+            <p class="eyebrow">Tagesbedarf</p><h2 class="section-title">Makros</h2>
+            <div class="macro-row"><span>Kohlenhydrate</span><div class="macro-track"><div class="macro-fill carbs" id="carbs-bar" style="width: 48%;"></div></div><span class="macro-value" id="carbs">287 g</span></div>
+            <div class="macro-row"><span>Fette</span><div class="macro-track"><div class="macro-fill fat" id="fat-bar" style="width: 27%;"></div></div><span class="macro-value" id="fat">72 g</span></div>
+            <div class="macro-row"><span>Eiweiß</span><div class="macro-track"><div class="macro-fill protein" id="protein-bar" style="width: 25%;"></div></div><span class="macro-value" id="protein">149 g</span></div>
+            <p class="bmi-detail">Die Aufteilung orientiert sich an deinem Körpertyp und deinem geschätzten Bedarf.</p>
+          </article>
+        </div>
+      </section>
+    </main>
+    <footer>Grundumsatz nach Harris-Benedict-Formel <br> 
+            Gesamtenergiebedarf: Grundumsatz × (PAL + Sportzuschlag). <br>
+            Wasserbedarf: 35–40 ml pro kg Körpergewicht (minus 800 ml, die durch Ernährung aufgenommen werden). <br>
+            BMI-Referenzbereiche nach altersabhängigen NRC-Werten (USA). <br>
+            Bei gesundheitlichen Fragen bitte fachlich beraten lassen.</footer>
+  </div>
+  <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.2/dist/jspdf.umd.min.js"></script>
+  <script>
+    const form = document.querySelector('#energy-form');
+    const number = new Intl.NumberFormat('de-DE', { maximumFractionDigits: 0 });
+    const decimal = new Intl.NumberFormat('de-DE', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+    const setText = (id, value) => { document.querySelector(`#${id}`).textContent = value; };
+    const escapeHtml = (value) => value.replace(/[&<>'"]/g, character => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[character]));
+
+    function calculate(event) {
+      if (event) event.preventDefault();
+      const age = Number(document.querySelector('#age').value);
+      const height = Number(document.querySelector('#height').value);
+      const weight = Number(document.querySelector('#weight').value);
+      const sex = document.querySelector('input[name="sex"]:checked').value;
+      const pal = Number(document.querySelector('#activity').value);
+      const sport = Number(document.querySelector('#sport').value);
+      const bodyType = document.querySelector('#body-type').value;
+      if (!age || !height || !weight) return;
+
+      const bmr = sex === 'male'
+        ? 66.47 + 13.7 * weight + 5 * height - 6.8 * age
+        : 655.1 + 9.6 * weight + 1.8 * height - 4.7 * age;
+      const activityFactor = pal + sport;
+      const total = bmr * activityFactor;
+      const activityCalories = Math.max(0, total - bmr);
+      const bmi = weight / ((height / 100) ** 2);
+      const macroRatios = { ectomorph: [0.4, 0.4, 0.2], endomorph: [0.6, 0.2, 0.2], mesomorph: [0.5, 0.3, 0.2] }[bodyType];
+      const [carbRatio, fatRatio, proteinRatio] = macroRatios;
+
+      const waterMinimum = Math.max(0, weight * 0.035 - 0.8);
+      const waterMaximum = Math.max(0, weight * 0.04 - 0.8);
+      setText('total-calories', `${number.format(total)} kcal`); setText('bmr', number.format(bmr)); setText('activity-calories', number.format(activityCalories)); setText('water', `${decimal.format(waterMinimum)}–${decimal.format(waterMaximum)}`);
+      setText('bmi', decimal.format(bmi));
+      const bmiReference = age < 19 ? null : age < 25 ? { lower: 19, upper: 24 } : age < 35 ? { lower: 20, upper: 25 } : age < 45 ? { lower: 21, upper: 26 } : age < 55 ? { lower: 22, upper: 27 } : age < 65 ? { lower: 23, upper: 28 } : { lower: 24, upper: 29 };
+      const state = !bmiReference ? 'Altersabhängig' : bmi < bmiReference.lower ? 'Untergewicht' : bmi <= bmiReference.upper ? 'Normalgewicht' : bmi <= bmiReference.upper + 5 ? 'Übergewicht' : 'Adipositas';
+      setText('bmi-state', state);
+      const bmiAdvice = document.querySelector('#bmi-advice');
+      bmiAdvice.className = 'bmi-advice';
+      if (!bmiReference) {
+        bmiAdvice.textContent = '';
+      } else {
+        const heightInMeters = height / 100;
+        const idealMinimum = bmiReference.lower * heightInMeters ** 2;
+        const idealMaximum = bmiReference.upper * heightInMeters ** 2;
+        const idealWeight = `${decimal.format(idealMinimum)} bis ${decimal.format(idealMaximum)} kg`;
+        if (bmi > bmiReference.upper) {
+          bmiAdvice.classList.add(bmi > bmiReference.upper + 5 ? 'obesity' : 'overweight');
+          const reducedMinimum = total - 500;
+          const reducedMaximum = total - 200;
+          const reducedMacros = energy => ({
+            carbs: energy * carbRatio * 0.25,
+            fat: energy * fatRatio / 9,
+            protein: energy * proteinRatio / 4
+          });
+          const minimumMacros = reducedMacros(reducedMinimum);
+          const maximumMacros = reducedMacros(reducedMaximum);
+          bmiAdvice.innerHTML = `Dein Körpergewicht liegt über dem altersbezogenen Normalbereich von ${idealWeight}.<br><br>Um Gewicht abzunehmen solltest du die Energiezufuhr um 200 bis 500 kcal pro Tag reduzieren. Das heißt<br><br>Energiezufuhr: <strong>${number.format(reducedMinimum)} - ${number.format(reducedMaximum)} kcal</strong><br>Kohlenhydrate: <strong>${number.format(minimumMacros.carbs)} - ${number.format(maximumMacros.carbs)} g</strong><br>Fette: <strong>${number.format(minimumMacros.fat)} - ${number.format(maximumMacros.fat)} g</strong><br>Eiweiß: <strong>${number.format(minimumMacros.protein)} - ${number.format(maximumMacros.protein)} g</strong>.<br><br>Nimm diese Angaben nur als Richtwert. Eine fachliche Beratung wird empfohlen.`;
+        } else if (bmi < bmiReference.lower) {
+          bmiAdvice.classList.add('underweight');
+          bmiAdvice.innerHTML = `<strong>Hinweis:</strong> Dein Körpergewicht liegt unter dem altersbezogenen Normalbereich von ${idealWeight}. Eine fachliche Beratung wird empfohlen.`;
+        } else {
+          bmiAdvice.classList.add('ideal');
+          bmiAdvice.innerHTML = `Dein Körpergewicht liegt im altersbezogenen Normalbereich von ${idealWeight}.`;
+        }
+      }
+      const bmiScale = document.querySelector('.bmi-scale');
+      const bmiScaleMin = 10;
+      const bmiScaleMax = 40;
+      if (!bmiReference) {
+        bmiScale.style.setProperty('--bmi-scale-columns', '28.33% 21.33% 17% 33.33%');
+      } else {
+        const idealRange = `${decimal.format(bmiReference.lower)} bis ${decimal.format(bmiReference.upper)}`;
+        const overweightEnd = Math.min(40, bmiReference.upper + 5);
+        bmiScale.style.setProperty('--bmi-scale-columns', `${(bmiReference.lower - bmiScaleMin) / (bmiScaleMax - bmiScaleMin) * 100}% ${(bmiReference.upper - bmiReference.lower) / (bmiScaleMax - bmiScaleMin) * 100}% ${(overweightEnd - bmiReference.upper) / (bmiScaleMax - bmiScaleMin) * 100}% ${(bmiScaleMax - overweightEnd) / (bmiScaleMax - bmiScaleMin) * 100}%`);
+      }
+      document.querySelector('#bmi-marker').style.left = `${Math.min(98, Math.max(2, ((bmi - bmiScaleMin) / (bmiScaleMax - bmiScaleMin)) * 100))}%`;
+      setText('carbs', `${number.format(total * carbRatio * 0.25)} g`); setText('fat', `${number.format(total * fatRatio / 9)} g`); setText('protein', `${number.format(total * proteinRatio / 4)} g`);
+      document.querySelector('#carbs-bar').style.width = `${carbRatio * 100}%`; document.querySelector('#fat-bar').style.width = `${fatRatio * 100}%`; document.querySelector('#protein-bar').style.width = `${proteinRatio * 100}%`;
+    }
+    form.addEventListener('submit', calculate);
+    form.querySelectorAll('input, select').forEach(field => {
+      field.addEventListener('input', calculate);
+      field.addEventListener('change', calculate);
+    });
+    document.querySelector('#report-button').addEventListener('click', () => {
+      const JsPDF = window.jspdf?.jsPDF;
+      if (!JsPDF) {
+        window.alert('Der PDF-Download ist gerade nicht verfügbar. Bitte prüfe deine Internetverbindung und versuche es erneut.');
+        return;
+      }
+
+      const report = new JsPDF();
+      const pdfDate = new Date().toLocaleDateString('de-DE');
+      const pdfName = document.querySelector('#report-name').value.trim();
+      const rows = [
+        ['Gesamtenergiebedarf', document.querySelector('#total-calories').textContent],
+        ['Grundumsatz', `${document.querySelector('#bmr').textContent} kcal`],
+        ['Leistungsumsatz', `${document.querySelector('#activity-calories').textContent} kcal`],
+        ['Makronährstoffe', `Kohlenhydrate ${document.querySelector('#carbs').textContent} · Fette ${document.querySelector('#fat').textContent} · Eiweiß ${document.querySelector('#protein').textContent}`],
+        ['Wasserbedarf', `${document.querySelector('#water').textContent} Liter / Tag`],
+        ['BMI', `${document.querySelector('#bmi').textContent} · ${document.querySelector('#bmi-state').textContent}`]
+      ];
+
+      report.setFont('helvetica', 'bold');
+      report.setFontSize(19);
+      report.setTextColor(7, 83, 79);
+      report.text('Persönlicher Energie- und Nährstoffbedarf', 20, 25);
+      report.setFont('helvetica', 'normal');
+      report.setFontSize(10);
+      report.setTextColor(100, 115, 116);
+      report.text(`${pdfName ? `${pdfName} · ` : ''}Erstellt am ${pdfDate}`, 20, 34);
+      report.setDrawColor(220, 230, 223);
+      report.line(20, 41, 190, 41);
+
+      let y = 55;
+      rows.forEach(([label, value]) => {
+        report.setFont('helvetica', 'normal');
+        report.setFontSize(10);
+        report.setTextColor(100, 115, 116);
+        report.text(label, 20, y);
+        report.setFont('helvetica', 'bold');
+        report.setFontSize(12);
+        report.setTextColor(22, 36, 38);
+        const valueLines = report.splitTextToSize(value, 165);
+        report.text(valueLines, 20, y + 7);
+        y += 14 + (valueLines.length - 1) * 6;
+        report.setDrawColor(220, 230, 223);
+        report.line(20, y - 2, 190, y - 2);
+        y += 7;
+      });
+
+      const bmiAdvice = document.querySelector('#bmi-advice').innerText.trim();
+      if (bmiAdvice) {
+        const adviceLines = report.splitTextToSize(bmiAdvice, 170);
+        const sectionHeight = 14 + adviceLines.length * 4.5;
+        if (y + sectionHeight > 277) {
+          report.addPage();
+          y = 25;
+        }
+        report.setFont('helvetica', 'bold');
+        report.setFontSize(11);
+        report.setTextColor(7, 83, 79);
+        report.text('Hinweis basierend auf deinem BMI:', 20, y + 5);
+        report.setFont('helvetica', 'normal');
+        report.setFontSize(9);
+        report.setTextColor(22, 36, 38);
+        report.text(adviceLines, 20, y + 12);
+      }
+      report.save(`daily-energy-bericht-${new Date().toISOString().slice(0, 10)}.pdf`);
+      return;
+
+      const reportName = escapeHtml(document.querySelector('#report-name').value.trim());
+      const reportDate = new Date().toLocaleDateString('de-DE');
+      const email = '';
+      const reportWindow = window.open('', '_blank');
+      if (!reportWindow) {
+        window.alert('Bitte erlaube Pop-ups, um den PDF-Bericht zu öffnen.');
+        return;
+      }
+      const reportHtml = `<!doctype html><html lang="de"><head><meta charset="UTF-8"><title>Daily Energy Bericht</title><style>body{font:16px Arial,sans-serif;max-width:720px;margin:48px auto;color:#162426}h1{font:700 34px Georgia,serif;color:#07534f}.date{color:#647374;font-size:12px}.grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:28px 0}.item{border:1px solid #dce6df;border-radius:10px;padding:16px}.label{display:block;color:#647374;font-size:12px;margin-bottom:7px}.value{font-size:23px;font-weight:700}.note{border-top:1px solid #dce6df;padding-top:16px;color:#647374;font-size:12px;line-height:1.5}@media print{body{margin:20px}}</style></head><body><h1>Daily Energy</h1><p class="date">Persönlicher Energie-Check · ${new Date().toLocaleDateString('de-DE')}</p><div class="grid"><div class="item"><span class="label">Gesamtenergie</span><span class="value">${document.querySelector('#total-calories').textContent}</span></div><div class="item"><span class="label">Grundumsatz</span><span class="value">${document.querySelector('#bmr').textContent} kcal</span></div><div class="item"><span class="label">Leistungsumsatz</span><span class="value">${document.querySelector('#activity-calories').textContent} kcal</span></div><div class="item"><span class="label">Wasserbedarf</span><span class="value">${document.querySelector('#water').textContent} Liter</span></div><div class="item"><span class="label">BMI</span><span class="value">${document.querySelector('#bmi').textContent} · ${document.querySelector('#bmi-state').textContent}</span></div><div class="item"><span class="label">Makros</span><span class="value">KH ${document.querySelector('#carbs').textContent} · F ${document.querySelector('#fat').textContent} · E ${document.querySelector('#protein').textContent}</span></div></div><p class="note">Orientierungswerte nach der revidierten Harris-Benedict-Formel. Wasser: 35–40 ml pro kg Körpergewicht minus 800 ml. Bitte im Druckdialog „Als PDF speichern“ wählen und die Datei anschließend an ${email} anhängen.</p></body></html>`;
+      reportWindow.document.write(reportHtml.replace('Bitte im Druckdialog „Als PDF speichern“ wählen und die Datei anschließend an  anhängen.', 'Bitte im Druckdialog „Als PDF speichern“ wählen.'));
+      reportWindow.document.close();
+      reportWindow.document.querySelector('.date').remove();
+      reportWindow.document.body.insertAdjacentHTML('afterbegin', `${reportName ? `<p style="color:#647374;font-size:14px;margin:0 0 8px">${reportName}</p>` : ''}<p style="color:#647374;font-size:12px;margin:0 0 24px">Erstellt am ${reportDate}</p>`);
+      reportWindow.document.title = 'Persönlicher Energie- und Nährstoffbedarf';
+      reportWindow.document.querySelector('h1').textContent = 'Persönlicher Energie- und Nährstoffbedarf';
+      const reportGrid = reportWindow.document.querySelector('.grid');
+      const reportItems = [...reportGrid.querySelectorAll('.item')];
+      const macroItem = reportItems[5];
+      reportItems[0].querySelector('.label').textContent = 'Gesamtenergiebedarf';
+      macroItem.querySelector('.label').textContent = 'Makronährstoffe';
+      macroItem.querySelector('.value').textContent = `Kohlenhydrate ${document.querySelector('#carbs').textContent} · Fette ${document.querySelector('#fat').textContent} · Eiweiß ${document.querySelector('#protein').textContent}`;
+      const orderedItems = [reportItems[0], reportItems[1], reportItems[2], macroItem, reportItems[3], reportItems[4]];
+      reportGrid.replaceChildren(...orderedItems);
+      reportGrid.style.display = 'block';
+      orderedItems.forEach(item => { item.style.marginBottom = '12px'; });
+      reportWindow.document.querySelector('.note').remove();
+      reportWindow.focus();
+      reportWindow.print();
+    });
+    calculate();
+  </script>
+</body>
+</html>
